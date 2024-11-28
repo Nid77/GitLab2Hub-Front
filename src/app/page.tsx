@@ -1,67 +1,70 @@
 "use client";
-import {getGitLabProjects} from "../services/GitlabService";
+import { getGitLabProjects } from "../services/GitlabService";
 import { Project } from "@/types/GitLab";
 import { z } from "zod";
 import { useState } from "react";
 import ProjectCard from "./ProjectCard";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/hooks/use-toast";
+import { ToastMessages } from "@/components/Toast";
 
 export default function Home() {
+    const [projects, setProjects] = useState<Project[]>([]);
+    const toast = useToast();
 
-  const [value, setValue] = useState<string>("");
-  const [projects, setProjects] = useState<Project[]>([]);
+    function getProjects(token: string) {
+        getGitLabProjects(token)
+            .then((projects: Project[]) => {
+                setProjects(projects);
+            })
+            .catch((error: string) => {
+                console.log("error when getting projects " + error);
+                toast.toast(ToastMessages.error);
+            });
+    }
 
-  function getProjects(token?: string) {
-    console.log("token", token);
-    getGitLabProjects().then((projects: Project[]) => {
-      console.log(projects);
-      setProjects(projects);
-    }).catch((error: string) => {
-      console.error(error);
+    const userShema = z.object({
+        gitlabToken: z.string(),
     });
 
-  }
+    function formAction(e: any) {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        const formValues = Object.fromEntries(formData.entries());
+        const token = userShema.safeParse(formValues).data?.gitlabToken;
+        getProjects(token as string);
+    }
 
-  const userShema = z.object({
-    token: z.string(),
-  });
+    return (
+        <div className="flex flex-col gap-4 m-4">
+            <h1>Migarte from GitLab to GitHub</h1>
 
-  function formAction(e: any) {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const formValues = Object.fromEntries(formData.entries());
-    const token = userShema.safeParse(formValues).data?.token;
-    getProjects(token);
-  }
+            <div className="flex flex-col self-center m-2 gap-4">
+                <h2>Get GitLab Projetcs </h2>
 
-  return (
-    <div>
+                <form onSubmit={formAction} className="flex gap-2">
+                    <label htmlFor="gitlab-token">Git Lab Token</label>
+                    <Input
+                        placeholder="GitLab Token"
+                        id="gitlab-token"
+                        name="gitlabToken"
+                    />
+                    <Button type="submit">Click me</Button>
+                </form>
 
-      <h1>Home</h1>
+                <div className="mt-8">
+                    <h3>Projects</h3>
 
-      <div>
-        <h2>Get GitLab Projetcs </h2>
+                    {projects == undefined || projects?.length === 0
+                        ? "No projects"
+                        : ""}
 
-        <form 
-        onSubmit={formAction}
-        >
-          <label htmlFor="">Git Lab Token</label>
-          <input type="text" id="gitlab-token" placeholder="GitLab Token"/>
-          <button type="submit">Submit</button>
-        </form>
-
-
-      </div>
-        
-      {projects.length === 0 && 'No projects'}
-
-      {projects.map((project) => (
-          <ProjectCard
-            key={project.id}
-            project={project}
-          />
-        ))}
-
-
-    </div>
-  );
+                    {projects?.map((project) => (
+                        <ProjectCard key={project.id} project={project} />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
 }

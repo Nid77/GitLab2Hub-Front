@@ -4,14 +4,14 @@ export interface Namespace {
     id: number;
     name: string;
     path: string;
-    kind: 'group' | 'user';
+    kind: "group" | "user";
     full_path: string;
     parent_id: number | null;
     avatar_url: string | null;
     web_url: string;
-  }
-  
-  export interface Project {
+}
+
+export interface Project {
     id: number;
     description: string | null;
     name: string;
@@ -29,5 +29,4 @@ export interface Namespace {
     star_count: number;
     last_activity_at: string;
     namespace: Namespace;
-  }
-  
+}
