@@ -70,3 +70,14 @@ body {
         @apply bg-background text-foreground;
     }
 }
+
+/* Link hover effect */
+a {
+    text-decoration: none;
+    transition: color 0.2s ease-in-out;
+}
+
+a:hover {
+    color: #2563eb; 
+    text-decoration: underline;
+}

@@ -1,3 +1,5 @@
+import { title } from "process";
+
 export const ToastMessages = {
     success: {
       title: "Success",
@@ -18,3 +20,10 @@ export const ToastMessages = {
       duration: 3000,
     },
   };
+
+export const ErrorMessages = (title: string, description: string) => {
+    let msg = ToastMessages.error;
+    msg.title = title;
+    msg.description = description;
+    return msg;
+}
