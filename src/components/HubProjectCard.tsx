@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { type Project } from "./types/GitLab";
+import { type HubProject } from "@/types/GitHub";
 import {
     Card,
     CardContent,
@@ -12,11 +11,12 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 
-const ProjectCard = ({ project }: { project: Project }) => {
+
+const LabProjectCard = ({ project }: { project: HubProject }) => {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Projet {project.name}</CardTitle>
+                <CardTitle>Projet {project.full_name}</CardTitle>
                 <CardDescription>
                     {project.description ? (
                         <p>{project.description}</p>
@@ -25,12 +25,9 @@ const ProjectCard = ({ project }: { project: Project }) => {
                     )}
                 </CardDescription>
             </CardHeader>
-            <CardContent>
-                <p>Card Content</p>
-            </CardContent>
             <CardFooter>
                 <a
-                    href={project.web_url}
+                    href={project.url}
                     target="_blank"
                     rel="noopener noreferrer"
                 >
@@ -41,4 +38,4 @@ const ProjectCard = ({ project }: { project: Project }) => {
     );
 };
 
-export default ProjectCard;
+export default LabProjectCard;

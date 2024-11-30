@@ -1,22 +1,23 @@
 import axios from "axios";
 
 const client = axios.create({
-    baseURL: "https://gitlab.com/api/v4",
+    baseURL: "https://api.github.com/",
     headers: {
-        Accept: "application/json",
+        Accept: "application/vnd.github+json",
         "Content-Type": "application/json",
+        "X-GitHub-Api-Version": "2022-11-28"
     },
 });
 
-export const setBaseUrl = (url: string) => {
-    client.defaults.baseURL = "https://" + url + "/api/v4";
+export const setHubBaseUrl = (url: string) => {
+    client.defaults.baseURL = "https://" + url ;
 };
 
-export const setToken = (token: string) => {
+export const setHubToken = (token: string) => {
     client.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 };
 
-export const getToken = () => {
+export const getHubToken = () => {
     return client.defaults.headers.common["Authorization"];
 };
 
@@ -43,13 +44,9 @@ const executeAxiosRequest = async (
     }
 };
 
-export const getGitLabProjects = async (token: string) => {
-    if (!getToken() && !token) throw new Error("Token is required");
-    if (!getToken()) setToken(token);
-    return executeAxiosRequest("/projects", "GET", null, {
-        membership: true,
-        simple: true,
-        per_page: 10,
-        page: 1,
-    });
-};
+export const getGitHubProjects = async (token? : string) => {
+    if (!getHubToken() && !token) throw new Error("Token is not set");
+    if(!getHubToken() && token) setHubToken(token);
+    return executeAxiosRequest("/user/repos", "GET", null);
+}
+
