@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Dispatch, SetStateAction, useEffect, useState } from "react";
 import axios from "axios";
 import { type Project } from "./types/GitLab";
 import {
@@ -11,8 +11,14 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
-const LabProjectCard = ({ project }: { project: Project }) => {
+interface LabProjectCardProps {
+    project: Project;
+    selectProject: Dispatch<SetStateAction<Project | undefined>>
+}
+
+const LabProjectCard = ({ project, selectProject }: LabProjectCardProps) => {
     return (
         <Card>
             <CardHeader>
@@ -25,7 +31,7 @@ const LabProjectCard = ({ project }: { project: Project }) => {
                     )}
                 </CardDescription>
             </CardHeader>
-            <CardFooter>
+            <CardFooter className="flex justify-between">
                 <a
                     href={project.web_url}
                     target="_blank"
@@ -33,6 +39,11 @@ const LabProjectCard = ({ project }: { project: Project }) => {
                 >
                     Voir sur GitLab
                 </a>
+                <Button
+                onClick={() => selectProject(project)}
+                >
+                    Select
+                </Button>
             </CardFooter>
         </Card>
     );

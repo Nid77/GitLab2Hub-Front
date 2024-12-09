@@ -1,51 +1,64 @@
 "use client";
-import { getGitLabProjects, setBaseUrl } from "../services/GitlabService";
-import { getGitHubProjects, setHubBaseUrl } from "../services/GithubService";
-import { Project } from "@/types/GitLab";
-import { HubProject } from "@/types/GitHub";
+
 import { set, z } from "zod";
-import { useState } from "react";
+import { FormEvent, use, useEffect, useState } from "react";
 import ProjectCard from "../components/LabProjectCard";
-import HubProjectCard  from "../components/HubProjectCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/hooks/use-toast";
 import { ErrorMessages } from "@/components/Toast";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+import { getGitLabProjects, setBaseUrl } from "../services/GitlabService";
+import { Project } from "@/types/GitLab";
+
+import { createGitHubProject, setHubBaseUrl } from "../services/GithubService";
+import { GitLabToGitHubForm } from "@/components/GitLabToGitHubForm";
+import { HubProject } from "@/types/GitHub";
+import { setHubToken } from "../services/GithubService";
 
 export default function Home() {
-    const [projects, setProjects] = useState<Project[]>([]);
-    const [hubProjects, setHubProjects] = useState<HubProject[]>([]);
+    const [projects, setLabProjects] = useState<Project[]>([]);
+    const [project, setLabProject] = useState<Project | undefined>();
     const [gitlabUrl, setGitlabUrl] = useState<string>("gitlab.com");
     const [githubUrl, setGithubUrl] = useState<string>("api.github.com");
+
     const toast = useToast();
 
     function getProjects(token: string | undefined, baseUrl: string) {
-        if (baseUrl && baseUrl !== "") {
-            setBaseUrl(baseUrl);
-        }
+        if (baseUrl && baseUrl !== "") setBaseUrl(baseUrl);
 
         getGitLabProjects(token ?? "")
             .then((projects: Project[]) => {
-                setProjects(projects);
+                setLabProjects(projects);
             })
             .catch((error: Error) => {
                 console.log(error);
-                toast.toast(ErrorMessages("Error", error.message));
+                toast.toast(
+                    ErrorMessages(
+                        "Error when getting lab projects",
+                        error.message
+                    )
+                );
             });
     }
-    function getHubProjects(token: string | undefined, baseUrl: string) {
-        if (baseUrl && baseUrl !== "") {
-            setHubBaseUrl(baseUrl);
-        }
 
-        getGitHubProjects(token ?? "")
-            .then((projects: HubProject[]) => {
-                setHubProjects(projects);
+    function makeHubProject(baseUrl: string, name: string) {
+        if (baseUrl && baseUrl !== "") setHubBaseUrl(baseUrl);
+
+        createGitHubProject(name, "test", false)
+            .then((project: HubProject) => {
+                console.log("Project created : " + project);
             })
             .catch((error: Error) => {
                 console.log(error);
-                toast.toast(ErrorMessages("Error", error.message));
+                toast.toast(
+                    ErrorMessages(
+                        "Error when making hub project",
+                        error.message
+                    )
+                );
             });
     }
 
@@ -53,18 +66,24 @@ export default function Home() {
         gitlabToken: z.string(),
     });
 
-    const hubShema = z.object({
-        githubToken: z.string(),
+    const HubShema = z.object({
+        githubRepoName: z.string(),
     });
 
-    function formAction(e: any) {
+    function formAction(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
         const formValues = Object.fromEntries(formData.entries());
         const token = LabShema.safeParse(formValues).data?.gitlabToken;
-        const hubToken = hubShema.safeParse(formValues).data?.githubToken;
-        token != undefined && getProjects(token, gitlabUrl);
-        hubToken != undefined && getHubProjects(hubToken, githubUrl);
+        if (token) getProjects(token, gitlabUrl);
+    }
+
+    function handleHubForm(e: FormEvent<HTMLFormElement>) {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        const formValues = Object.fromEntries(formData.entries());
+        const name = HubShema.safeParse(formValues).data?.githubRepoName;
+        if (name) makeHubProject(githubUrl, name);
     }
 
     return (
@@ -73,7 +92,7 @@ export default function Home() {
             <Separator />
 
             <h2>Configuration</h2>
-            <div className="flex w-full justify-center">
+            <div className="flex w-full justify-center gap-4">
                 <div className="flex flex-1 flex-col m-2 gap-4">
                     <h2>GitLab</h2>
 
@@ -109,13 +128,19 @@ export default function Home() {
                     <div className="mt-8">
                         <h3>Projects</h3>
 
-                        {projects == undefined || projects?.length === 0
-                            ? "No projects"
-                            : ""}
+                        <ScrollArea className=" h-[400px] rounded-md border p-4">
+                            {projects == undefined || projects?.length === 0
+                                ? "No projects"
+                                : ""}
 
-                        {projects?.map((project) => (
-                            <ProjectCard key={project.id} project={project} />
-                        ))}
+                            {projects?.map((project) => (
+                                <ProjectCard
+                                    key={project.id}
+                                    project={project}
+                                    selectProject={setLabProject}
+                                />
+                            ))}
+                        </ScrollArea>
                     </div>
                 </div>
 
@@ -146,21 +171,20 @@ export default function Home() {
                                 placeholder="GitHub Token"
                                 id="github-token"
                                 name="githubToken"
+                                onChange={(e) => {
+                                    setHubToken(e.target.value);
+                                }}
                             />
-                            <Button type="submit">Submit</Button>
                         </div>
                     </form>
 
                     <div className="mt-8">
-                        <h3>Projects</h3>
-
-                        {hubProjects == undefined || hubProjects?.length === 0
-                            ? "No projects"
-                            : ""}
-
-                        {hubProjects?.map((project) => (
-                            <HubProjectCard key={project.id} project={project} />
-                        ))}
+                        <h3>Make a gitHub repository</h3>
+                        <GitLabToGitHubForm
+                            formAction={handleHubForm}
+                            urlValue={gitlabUrl}
+                            nameValue={project?.name}
+                        />
                     </div>
                 </div>
             </div>
