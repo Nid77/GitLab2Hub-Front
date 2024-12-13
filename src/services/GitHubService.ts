@@ -1,7 +1,4 @@
 import axios from "axios";
-import { get } from "http";
-import { url } from "inspector";
-import { getURL } from "next/dist/shared/lib/utils";
 
 const client = axios.create({
     baseURL: "https://api.github.com/",
@@ -25,12 +22,7 @@ export const getHubToken = () => {
     return client.defaults.headers.common["Authorization"];
 };
 
-const executeAxiosRequest = async (
-    url: string,
-    method: string,
-    data: any,
-    params?: any
-) => {
+const executeAxiosRequest = async (url: string, method: string, data: any, params?: any) => {
     try {
         const response = await client.request({
             url,
@@ -54,19 +46,29 @@ export const getGitHubProjects = async (token?: string) => {
     return executeAxiosRequest("/user/repos", "GET", null);
 };
 
-export const createGitHubProject = async (
-    name: string,
-    description: string,
-    privateRepo: boolean,
-) => {
+const createGitHubProject = async (name: string, privateRepo: boolean, description: string) => {
+    return executeAxiosRequest("/user/repos", "POST", {
+        name: name,
+        private: privateRepo,
+        description: description,
+    });
+};
 
-    console.log("Creating project with url: ", client.defaults.baseURL);
+export const migrateHubProject = async (
+    name: string,
+    privateRepo: boolean,
+    description: string,
+    sourceRepoUrl: string
+) => {
+    setHubBaseUrl(process.env.BACKEND_URL || "http://localhost:3000");
+
+    const project = await createGitHubProject(name, privateRepo, description);
 
     return executeAxiosRequest("/user/repos", "POST", {
         name: name,
-        homepage: "https://github.com",
-        description: description,
         private: privateRepo,
+        description: description,
+        sourceRepoUrl: sourceRepoUrl,
+        destinationRepoUrl: project.http_url_to_repo,
     });
-
 };

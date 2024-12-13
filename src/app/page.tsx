@@ -1,19 +1,19 @@
 "use client";
 
-import { set, z } from "zod";
+import { z } from "zod";
 import { FormEvent, use, useEffect, useState } from "react";
 import ProjectCard from "../components/LabProjectCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/hooks/use-toast";
-import { ErrorMessages } from "@/components/Toast";
+import { ErrorMessages, SuccessMessages } from "@/components/Toast";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { getGitLabProjects, setBaseUrl } from "../services/GitlabService";
 import { Project } from "@/types/GitLab";
 
-import { createGitHubProject, setHubBaseUrl } from "../services/GithubService";
+import { migrateHubProject, setHubBaseUrl } from "../services/GithubService";
 import { GitLabToGitHubForm } from "@/components/GitLabToGitHubForm";
 import { HubProject } from "@/types/GitHub";
 import { setHubToken } from "../services/GithubService";
@@ -26,6 +26,10 @@ export default function Home() {
 
     const toast = useToast();
 
+    useEffect(() => {
+        console.log("project", project);
+    }, [project]);
+
     function getProjects(token: string | undefined, baseUrl: string) {
         if (baseUrl && baseUrl !== "") setBaseUrl(baseUrl);
 
@@ -35,30 +39,20 @@ export default function Home() {
             })
             .catch((error: Error) => {
                 console.log(error);
-                toast.toast(
-                    ErrorMessages(
-                        "Error when getting lab projects",
-                        error.message
-                    )
-                );
+                toast.toast(ErrorMessages("Error when getting lab projects", error.message));
             });
     }
 
-    function makeHubProject(baseUrl: string, name: string) {
+    function migrateProject(baseUrl: string, name: string, privateRepo: boolean, description: string) {
         if (baseUrl && baseUrl !== "") setHubBaseUrl(baseUrl);
 
-        createGitHubProject(name, "test", false)
+        migrateHubProject(name, privateRepo, description, project?.http_url_to_repo ?? "")
             .then((project: HubProject) => {
-                console.log("Project created : " + project);
+                toast.toast(SuccessMessages("Success", `Project ${project.name} migrated successfully`));
             })
             .catch((error: Error) => {
                 console.log(error);
-                toast.toast(
-                    ErrorMessages(
-                        "Error when making hub project",
-                        error.message
-                    )
-                );
+                toast.toast(ErrorMessages("Error when making hub project", error.message));
             });
     }
 
@@ -67,7 +61,9 @@ export default function Home() {
     });
 
     const HubShema = z.object({
-        githubRepoName: z.string(),
+        githubRepoName: z.string().min(1),
+        isprivate: z.string().optional(),
+        description: z.string(),
     });
 
     function formAction(e: FormEvent<HTMLFormElement>) {
@@ -82,8 +78,11 @@ export default function Home() {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
         const formValues = Object.fromEntries(formData.entries());
-        const name = HubShema.safeParse(formValues).data?.githubRepoName;
-        if (name) makeHubProject(githubUrl, name);
+        const result = HubShema.safeParse(formValues);
+        if (result.success) {
+            const { githubRepoName, isprivate, description } = result.data;
+            migrateProject(githubUrl, githubRepoName, isprivate === "on" ? true : false, description);
+        }
     }
 
     return (
@@ -106,21 +105,14 @@ export default function Home() {
                         />
                     </div>
 
-                    <a href="/about/GitLabToken">
+                    <a href="/about/GitLabToken" target="_blank">
                         You need to make Acess Token in GitLab !
                     </a>
 
-                    <form
-                        onSubmit={formAction}
-                        className="flex flex-col gap-2 "
-                    >
+                    <form onSubmit={formAction} className="flex flex-col gap-2 ">
                         <label htmlFor="gitlab-token">GitLab Token</label>
                         <div className="flex">
-                            <Input
-                                placeholder="GitLab Token"
-                                id="gitlab-token"
-                                name="gitlabToken"
-                            />
+                            <Input placeholder="GitLab Token" id="gitlab-token" name="gitlabToken" />
                             <Button type="submit">Submit</Button>
                         </div>
                     </form>
@@ -128,17 +120,11 @@ export default function Home() {
                     <div className="mt-8">
                         <h3>Projects</h3>
 
-                        <ScrollArea className=" h-[400px] rounded-md border p-4">
-                            {projects == undefined || projects?.length === 0
-                                ? "No projects"
-                                : ""}
+                        <ScrollArea className=" h-[500px] rounded-md border p-4">
+                            {projects == undefined || projects?.length === 0 ? "No projects" : ""}
 
                             {projects?.map((project) => (
-                                <ProjectCard
-                                    key={project.id}
-                                    project={project}
-                                    selectProject={setLabProject}
-                                />
+                                <ProjectCard key={project.id} project={project} selectProject={setLabProject} />
                             ))}
                         </ScrollArea>
                     </div>
@@ -157,14 +143,11 @@ export default function Home() {
                             onChange={(e) => setGithubUrl(e.target.value)}
                         />
                     </div>
-                    <a href="/about/GitHubToken">
+                    <a href="/about/GitHubToken" target="_blank">
                         You need to make Acess Token in GitHub !
                     </a>
 
-                    <form
-                        onSubmit={formAction}
-                        className="flex flex-col gap-2 "
-                    >
+                    <form onSubmit={formAction} className="flex flex-col gap-2 ">
                         <label htmlFor="github-token">GitHub Token</label>
                         <div className="flex">
                             <Input
@@ -182,8 +165,9 @@ export default function Home() {
                         <h3>Make a gitHub repository</h3>
                         <GitLabToGitHubForm
                             formAction={handleHubForm}
-                            urlValue={gitlabUrl}
                             nameValue={project?.name}
+                            privValue={project?.visibility === "private" ? true : false}
+                            descValue={project?.description ?? ""}
                         />
                     </div>
                 </div>

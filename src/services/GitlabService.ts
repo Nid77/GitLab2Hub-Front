@@ -20,12 +20,7 @@ export const getToken = () => {
     return client.defaults.headers.common["Authorization"];
 };
 
-const executeAxiosRequest = async (
-    url: string,
-    method: string,
-    data: any,
-    params?: any
-) => {
+const executeAxiosRequest = async (url: string, method: string, data: any, params?: any) => {
     try {
         const response = await client.request({
             url,
@@ -48,7 +43,7 @@ export const getGitLabProjects = async (token: string) => {
     if (!getToken()) setToken(token);
     return executeAxiosRequest("/projects", "GET", null, {
         membership: true,
-        simple: true,
+        simple: false,
         per_page: 10,
         page: 1,
     });

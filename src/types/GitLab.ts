@@ -14,6 +14,7 @@ export interface Namespace {
 export interface Project {
     id: number;
     description: string | null;
+    visibility: "public" | "private" | "internal";
     name: string;
     name_with_namespace: string;
     path: string;
