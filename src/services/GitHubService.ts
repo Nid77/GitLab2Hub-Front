@@ -1,4 +1,5 @@
 import axios from "axios";
+import { executeAxiosRequest } from "./GlobalService";
 
 const client = axios.create({
     baseURL: "https://api.github.com/",
@@ -19,56 +20,12 @@ export const setHubToken = (token: string) => {
 };
 
 export const getHubToken = () => {
-    return client.defaults.headers.common["Authorization"];
-};
-
-const executeAxiosRequest = async (url: string, method: string, data: any, params?: any) => {
-    try {
-        const response = await client.request({
-            url,
-            method,
-            data,
-            params,
-        });
-        return response.data;
-    } catch (error) {
-        if (axios.isAxiosError(error)) {
-            throw new Error("Status: " + error.response?.status + " - Axios Error : " + error.response?.data.message);
-        } else {
-            throw new Error((error as Error).message);
-        }
-    }
+    const authorization = client.defaults.headers.common["Authorization"];
+    return typeof authorization === "string" ? authorization.replace("Bearer ", "") : "";
 };
 
 export const getGitHubProjects = async (token?: string) => {
     if (!getHubToken() && !token) throw new Error("Token is not set");
     if (!getHubToken() && token) setHubToken(token);
-    return executeAxiosRequest("/user/repos", "GET", null);
-};
-
-const createGitHubProject = async (name: string, privateRepo: boolean, description: string) => {
-    return executeAxiosRequest("/user/repos", "POST", {
-        name: name,
-        private: privateRepo,
-        description: description,
-    });
-};
-
-export const migrateHubProject = async (
-    name: string,
-    privateRepo: boolean,
-    description: string,
-    sourceRepoUrl: string
-) => {
-    setHubBaseUrl(process.env.BACKEND_URL || "http://localhost:3000");
-
-    const project = await createGitHubProject(name, privateRepo, description);
-
-    return executeAxiosRequest("/user/repos", "POST", {
-        name: name,
-        private: privateRepo,
-        description: description,
-        sourceRepoUrl: sourceRepoUrl,
-        destinationRepoUrl: project.http_url_to_repo,
-    });
+    return executeAxiosRequest(client, "/user/repos", "GET", null);
 };

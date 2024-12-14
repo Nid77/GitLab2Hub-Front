@@ -1,4 +1,5 @@
 import axios from "axios";
+import { executeAxiosRequest } from "./GlobalService";
 
 const client = axios.create({
     baseURL: "https://gitlab.com/api/v4",
@@ -20,28 +21,10 @@ export const getToken = () => {
     return client.defaults.headers.common["Authorization"];
 };
 
-const executeAxiosRequest = async (url: string, method: string, data: any, params?: any) => {
-    try {
-        const response = await client.request({
-            url,
-            method,
-            data,
-            params,
-        });
-        return response.data;
-    } catch (error) {
-        if (axios.isAxiosError(error)) {
-            throw new Error("Axios Error :" + error.response?.data.message);
-        } else {
-            throw new Error((error as Error).message);
-        }
-    }
-};
-
 export const getGitLabProjects = async (token: string) => {
     if (!getToken() && !token) throw new Error("Token is required");
     if (!getToken()) setToken(token);
-    return executeAxiosRequest("/projects", "GET", null, {
+    return executeAxiosRequest(client, "/projects", "GET", null, {
         membership: true,
         simple: false,
         per_page: 10,

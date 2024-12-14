@@ -1,7 +1,7 @@
 "use client";
 
-import { z } from "zod";
-import { FormEvent, use, useEffect, useState } from "react";
+import { set, z } from "zod";
+import { FormEvent, useEffect, useState } from "react";
 import ProjectCard from "../components/LabProjectCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,10 +13,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { getGitLabProjects, setBaseUrl } from "../services/GitlabService";
 import { Project } from "@/types/GitLab";
 
-import { migrateHubProject, setHubBaseUrl } from "../services/GithubService";
+import { setHubBaseUrl, getHubToken } from "@/services/GithubService";
 import { GitLabToGitHubForm } from "@/components/GitLabToGitHubForm";
-import { HubProject } from "@/types/GitHub";
-import { setHubToken } from "../services/GithubService";
+import { migrateHubProject } from "@/services/BackService";
+import { setHubToken, setLabToken } from "@/services/BackService";
 
 export default function Home() {
     const [projects, setLabProjects] = useState<Project[]>([]);
@@ -32,6 +32,7 @@ export default function Home() {
 
     function getProjects(token: string | undefined, baseUrl: string) {
         if (baseUrl && baseUrl !== "") setBaseUrl(baseUrl);
+        setLabToken(token ?? "");
 
         getGitLabProjects(token ?? "")
             .then((projects: Project[]) => {
@@ -43,12 +44,12 @@ export default function Home() {
             });
     }
 
-    function migrateProject(baseUrl: string, name: string, privateRepo: boolean, description: string) {
-        if (baseUrl && baseUrl !== "") setHubBaseUrl(baseUrl);
+    function migrateProject(name: string, privateRepo: boolean, description: string) {
+        if (githubUrl && githubUrl !== "") setHubBaseUrl(githubUrl);
 
-        migrateHubProject(name, privateRepo, description, project?.http_url_to_repo ?? "")
-            .then((project: HubProject) => {
-                toast.toast(SuccessMessages("Success", `Project ${project.name} migrated successfully`));
+        migrateHubProject(githubUrl, name, privateRepo, description, project?.http_url_to_repo ?? "")
+            .then(() => {
+                toast.toast(SuccessMessages("Success", `Project ${project?.name} migrated successfully`));
             })
             .catch((error: Error) => {
                 console.log(error);
@@ -81,7 +82,7 @@ export default function Home() {
         const result = HubShema.safeParse(formValues);
         if (result.success) {
             const { githubRepoName, isprivate, description } = result.data;
-            migrateProject(githubUrl, githubRepoName, isprivate === "on" ? true : false, description);
+            migrateProject(githubRepoName, isprivate === "on" ? true : false, description);
         }
     }
 
