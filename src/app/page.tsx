@@ -13,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { getGitLabProjects, setBaseUrl } from "../services/GitlabService";
 import { Project } from "@/types/GitLab";
 
-import { setHubBaseUrl, getHubToken } from "@/services/GithubService";
+import { setHubBaseUrl } from "@/services/GithubService";
 import { GitLabToGitHubForm } from "@/components/GitLabToGitHubForm";
 import { migrateHubProject } from "@/services/BackService";
 import { setHubToken, setLabToken } from "@/services/BackService";
@@ -23,18 +23,13 @@ export default function Home() {
     const [project, setLabProject] = useState<Project | undefined>();
     const [gitlabUrl, setGitlabUrl] = useState<string>("gitlab.com");
     const [githubUrl, setGithubUrl] = useState<string>("api.github.com");
+    const [tmpLabToken, setTmpLabToken] = useState<string>("");
 
     const toast = useToast();
 
-    useEffect(() => {
-        console.log("project", project);
-    }, [project]);
-
-    function getProjects(token: string | undefined, baseUrl: string) {
+    function getProjects(baseUrl: string) {
         if (baseUrl && baseUrl !== "") setBaseUrl(baseUrl);
-        setLabToken(token ?? "");
-
-        getGitLabProjects(token ?? "")
+        getGitLabProjects(tmpLabToken ?? "")
             .then((projects: Project[]) => {
                 setLabProjects(projects);
             })
@@ -57,10 +52,6 @@ export default function Home() {
             });
     }
 
-    const LabShema = z.object({
-        gitlabToken: z.string(),
-    });
-
     const HubShema = z.object({
         githubRepoName: z.string().min(1),
         isprivate: z.string().optional(),
@@ -69,10 +60,7 @@ export default function Home() {
 
     function formAction(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
-        const formData = new FormData(e.currentTarget);
-        const formValues = Object.fromEntries(formData.entries());
-        const token = LabShema.safeParse(formValues).data?.gitlabToken;
-        if (token) getProjects(token, gitlabUrl);
+        getProjects(gitlabUrl);
     }
 
     function handleHubForm(e: FormEvent<HTMLFormElement>) {
@@ -113,7 +101,13 @@ export default function Home() {
                     <form onSubmit={formAction} className="flex flex-col gap-2 ">
                         <label htmlFor="gitlab-token">GitLab Token</label>
                         <div className="flex">
-                            <Input placeholder="GitLab Token" id="gitlab-token" name="gitlabToken" />
+                            <Input
+                                placeholder="GitLab Token"
+                                value={tmpLabToken}
+                                onChange={(e) => {
+                                    setTmpLabToken(e.target.value);
+                                }}
+                            />
                             <Button type="submit">Submit</Button>
                         </div>
                     </form>
@@ -148,7 +142,7 @@ export default function Home() {
                         You need to make Acess Token in GitHub !
                     </a>
 
-                    <form onSubmit={formAction} className="flex flex-col gap-2 ">
+                    <form className="flex flex-col gap-2 ">
                         <label htmlFor="github-token">GitHub Token</label>
                         <div className="flex">
                             <Input

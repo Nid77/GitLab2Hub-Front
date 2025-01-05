@@ -17,7 +17,7 @@ export const executeAxiosRequest = async (
         return response.data;
     } catch (error) {
         if (axios.isAxiosError(error) && error.status) {
-            throw new Error("Status: " + error.status + "Error :" + error.response?.data);
+            throw new Error("Status: " + error.status + "Error :" + JSON.stringify(error.response?.data));
         } else {
             throw new Error((error as Error).message);
         }
