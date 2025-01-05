@@ -41,7 +41,7 @@ export default function Home() {
 
     function migrateProject(name: string, privateRepo: boolean, description: string) {
         if (githubUrl && githubUrl !== "") setHubBaseUrl(githubUrl);
-
+        setLabToken(tmpLabToken);
         migrateHubProject(githubUrl, name, privateRepo, description, project?.http_url_to_repo ?? "")
             .then(() => {
                 toast.toast(SuccessMessages("Success", `Project ${project?.name} migrated successfully`));
